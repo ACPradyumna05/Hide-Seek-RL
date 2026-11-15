@@ -5,20 +5,39 @@ from config import WIDTH, HEIGHT, FPS, FOV_HALF, FOV_RANGE, WALLS, R_SEEKER, R_H
 def draw(env, screen, font, smallfont, policy_name, paused, end_at):
     import pygame
     screen.fill((232, 237, 230))
-    # Draw cone via short ray casts; each ray stops at first wall.
-    points = [tuple(env.seeker)]
-    for a in np.linspace(env.seeker_angle - FOV_HALF, env.seeker_angle + FOV_HALF, 55):
-        unit = np.array([math.cos(a), math.sin(a)], dtype=np.float32)
+    points = [tuple(map(float, env.seeker))]
+
+    for a in np.linspace(
+        env.seeker_angle - FOV_HALF,
+        env.seeker_angle + FOV_HALF,
+        55
+    ):
+        unit = np.array(
+            [math.cos(a), math.sin(a)],
+            dtype=np.float32
+        )
+
         far = env.seeker + unit * FOV_RANGE
         endpoint = far
+
         for d in np.arange(5, FOV_RANGE + 5, 5):
             p = env.seeker + unit * d
-            if not (0 <= p[0] <= WIDTH and 0 <= p[1] <= HEIGHT) or any(
-                rx <= p[0] <= rx + rw and ry <= p[1] <= ry + rh for rx, ry, rw, rh in WALLS
+
+            if (
+                not (0 <= p[0] <= WIDTH and 0 <= p[1] <= HEIGHT)
+                or any(
+                    rx <= p[0] <= rx + rw
+                    and ry <= p[1] <= ry + rh
+                    for rx, ry, rw, rh in WALLS
+                )
             ):
                 endpoint = env.seeker + unit * max(0, d - 5)
                 break
-        points.append(tuple(endpoint))
+
+        # IMPORTANT: Inside the outer loop,
+        # but outside the inner ray-stepping loop.
+        points.append(tuple(map(float, endpoint)))
+
     overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     pygame.draw.polygon(overlay, (236, 69, 65, 65), points)
     screen.blit(overlay, (0, 0))
